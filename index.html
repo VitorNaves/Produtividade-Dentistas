@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metas Fenelon - Dashboard de Performance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="logo_fenelon.png" alt="Fenelon Logo" class="logo-img">
+                <h1>Metas<span>Fenelon</span></h1>
+            </div>
+            <nav>
+                <ul>
+                    <li class="active"><a href="#ov-dashboard">Dashboard</a></li>
+                    <li><a href="#ov-members">Membros</a></li>
+                    <li><a href="#ov-reports">Relatórios</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <header class="top-header">
+                <div class="search-bar">
+                    <input type="text" placeholder="Pesquisar dentista..." id="dentistSearch">
+                </div>
+                <div class="month-selector" style="margin-left: auto; margin-right: 20px;">
+                    <select id="monthSelect" class="select-css"></select>
+                </div>
+                <div class="user-profile">
+                    <span class="date-now" id="currentDate"></span>
+                </div>
+            </header>
+
+            <section class="overview" id="ov-dashboard">
+                <div class="summary-cards">
+                    <div class="card glass">
+                        <div class="card-info">
+                            <h3>Total Realizado</h3>
+                            <p class="value" id="totalRealizado">0</p>
+                        </div>
+                        <div class="card-icon blue">💰</div>
+                    </div>
+                    <div class="card glass">
+                        <div class="card-info">
+                            <h3>Meta Global</h3>
+                            <p class="value" id="totalMeta">0</p>
+                        </div>
+                        <div class="card-icon purple">🎯</div>
+                    </div>
+                    <div class="card glass">
+                        <div class="card-info">
+                            <h3>% Atingido</h3>
+                            <p class="value" id="globalPercentage">0%</p>
+                        </div>
+                        <div class="card-icon green">📈</div>
+                    </div>
+                    <div class="card glass">
+                        <div class="card-info">
+                            <h3>Dentistas</h3>
+                            <p class="value" id="dentistCount">0</p>
+                        </div>
+                        <div class="card-icon orange">👥</div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-container glass">
+                        <div class="chart-header">
+                            <h2>Performance por Dentista</h2>
+                            <p>Realizado vs Meta Mensal</p>
+                        </div>
+                        <div class="canvas-wrapper">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container glass">
+                    <div class="table-header">
+                        <h2>Relatório Detalhado</h2>
+                        <button class="btn-export" onclick="exportToCSV()">Exportar CSV</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="dentistsTable">
+                            <thead>
+                                <tr>
+                                    <th>Dentista</th>
+                                    <th>Meta Diária</th>
+                                    <th>Meta Mensal</th>
+                                    <th>Realizado</th>
+                                    <th>Status</th>
+                                    <th>Atingido</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
