@@ -1,6 +1,138 @@
 $ErrorActionPreference = "Stop"
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+# Localiza o primeiro .xlsx na pasta (evita problemas com acentos no nome fixo)
+$excelFile = Get-ChildItem -Path $scriptPath -Filter "*.xlsx" | Select-Object -First 1
+if (-not $excelFile) {
+    Write-Error "Nenhum arquivo .xlsx encontrado na pasta!"
+    exit 1
+}
+
+$excelPath    = $excelFile.FullName
+$jsOutputPath = Join-Path $scriptPath "data.js"
+
+Write-Host "Lendo: $($excelFile.Name)"
+
+$excel     = $null
+$workbook  = $null
+
+try {
+    $excel                 = New-Object -ComObject Excel.Application
+    $excel.Visible         = $false
+    $excel.DisplayAlerts   = $false
+
+    $workbook = $excel.Workbooks.Open($excelPath)
+    $sheet    = $workbook.Sheets.Item(1)
+    $maxRow   = $sheet.UsedRange.Rows.Count
+
+    $culture     = [System.Globalization.CultureInfo]::GetCultureInfo("pt-BR")
+    $monthlyData = @{}
+
+    for ($r = 2; $r -le $maxRow; $r++) {
+        $dentistName    = $sheet.Cells.Item($r, 1).Text.Trim()
+        $metaDiariaStr  = $sheet.Cells.Item($r, 2).Text.Trim()
+        $diasUteisStr   = $sheet.Cells.Item($r, 3).Text.Trim()
+        $metaMensalStr  = $sheet.Cells.Item($r, 4).Text.Trim()
+        $realizadoStr   = $sheet.Cells.Item($r, 5).Text.Trim()
+        $atingidoStr    = $sheet.Cells.Item($r, 6).Text.Trim()
+        $mesReferenteStr= $sheet.Cells.Item($r, 7).Text.Trim()
+
+        if ([string]::IsNullOrWhiteSpace($mesReferenteStr) -or [string]::IsNullOrWhiteSpace($dentistName)) {
+            continue
+        }
+
+        # Parse da data do mês
+        $parsedDate = [datetime]::MinValue
+        if ([datetime]::TryParse($mesReferenteStr, $culture, 'None', [ref]$parsedDate)) {
+            $monthKey  = $parsedDate.ToString("yyyy-MM")
+            $monthName = $parsedDate.ToString("MMMM yyyy", $culture)
+            $monthName = (Get-Culture).TextInfo.ToTitleCase($monthName.ToLower())
+        } else {
+            $monthKey  = $mesReferenteStr
+            $monthName = $mesReferenteStr
+        }
+
+        # Parse dos números (com proteção contra strings vazias)
+        $metaDiaria = 0; [int]::TryParse($metaDiariaStr,                    [ref]$metaDiaria) | Out-Null
+        $diasUteis  = 0; [int]::TryParse($diasUteisStr,                     [ref]$diasUteis)  | Out-Null
+        $metaMensal = 0; [int]::TryParse($metaMensalStr,                    [ref]$metaMensal) | Out-Null
+        $realizado  = 0; [int]::TryParse($realizadoStr,                     [ref]$realizado)  | Out-Null
+        $atingido   = 0; [int]::TryParse($atingidoStr.Replace("%","").Trim(),[ref]$atingido)  | Out-Null
+
+        if (-not $monthlyData.ContainsKey($monthKey)) {
+            $monthlyData[$monthKey] = @{
+                DisplayName = $monthName
+                Dentists    = [System.Collections.Generic.List[hashtable]]::new()
+            }
+        }
+
+        $monthlyData[$monthKey].Dentists.Add(@{
+            name       = $dentistName
+            metaDiaria = $metaDiaria
+            diasUteis  = $diasUteis
+            metaMensal = $metaMensal
+            realizado  = $realizado
+            atingido   = $atingido
+        })
+    }
+
+    # Fix #11: ordena meses por data real (não lexicográfico) — mais robusto
+    $sortedMonths = $monthlyData.Keys | Sort-Object {
+        try { [datetime]::ParseExact($_, "yyyy-MM", $null) }
+        catch { [datetime]::MinValue }
+    } -Descending
+
+    # Monta o arquivo data.js
+    $jsLines = [System.Collections.Generic.List[string]]::new()
+    $jsLines.Add("const historicalData = {")
+
+    $monthCount = 0
+    foreach ($mKey in $sortedMonths) {
+        $monthCount++
+        $monthObj    = $monthlyData[$mKey]
+        $displayName = $monthObj.DisplayName
+        $dentistsArr = $monthObj.Dentists
+
+        $jsLines.Add("  `"$mKey|!|$displayName`": [")
+
+        $dIdx = 0
+        foreach ($dMap in $dentistsArr) {
+            $dIdx++
+            $comma = if ($dIdx -lt $dentistsArr.Count) { "," } else { "" }
+            $jsLines.Add("    { name: `"$($dMap.name)`", metaDiaria: $($dMap.metaDiaria), diasUteis: $($dMap.diasUteis), metaMensal: $($dMap.metaMensal), realizado: $($dMap.realizado), atingido: $($dMap.atingido) }$comma")
+        }
+
+        $outerComma = if ($monthCount -lt $sortedMonths.Count) { "," } else { "" }
+        $jsLines.Add("  ]$outerComma")
+    }
+
+    $jsLines.Add("};")
+    $jsLines.Add("")
+    $jsLines.Add("let currentMonthKey = Object.keys(historicalData)[0];")
+    $jsLines.Add("let dentistsData = historicalData[currentMonthKey] || [];")
+
+    Set-Content -Path $jsOutputPath -Value ($jsLines -join "`r`n") -Encoding UTF8
+
+    Write-Host "data.js atualizado com sucesso! ($monthCount meses importados)"
+
+} catch {
+    Write-Error "Erro durante a execução: $_"
+    exit 1
+
+} finally {
+    # Fix #4: proteção robusta no finally — evita erro se workbook/excel nunca foram criados
+    if ($null -ne $workbook) {
+        try { $workbook.Close($false) } catch { <# ignora erros no fechamento #> }
+    }
+    if ($null -ne $excel) {
+        try {
+            $excel.Quit()
+            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
+        } catch { <# ignora erros no fechamento #> }
+    }
+}$ErrorActionPreference = "Stop"
+$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+
 # Find the first Excel file in the directory to avoid encoding/accent issues with hardcoded strings
 $excelFile = Get-ChildItem -Path $scriptPath -Filter "*.xlsx" | Select-Object -First 1
 if (-not $excelFile) {
