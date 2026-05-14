@@ -27,12 +27,25 @@
         </aside>
 
         <main class="content">
+            <!-- Fix #8: inline styles movidos para o CSS -->
             <header class="top-header">
                 <div class="search-bar">
                     <input type="text" placeholder="Pesquisar dentista..." id="dentistSearch">
                 </div>
-                <div class="month-selector" style="margin-left: auto; margin-right: 20px;">
+                <!-- Fix #7: sort-selector agora usa a mesma classe do month-selector para estilo consistente -->
+                <div class="month-selector header-month">
                     <select id="monthSelect" class="select-css"></select>
+                </div>
+                <div class="month-selector header-sort">
+                    <select id="sortSelect" class="select-css">
+                        <option value="default">Padrão da Planilha</option>
+                        <option value="atingido_desc">Melhor % Atingido</option>
+                        <option value="atingido_asc">Pior % Atingido</option>
+                        <option value="media_desc">Maior Média/Dia</option>
+                        <option value="media_asc">Menor Média/Dia</option>
+                        <option value="realizado_desc">Mais Laudos Feitos</option>
+                        <option value="realizado_asc">Menos Laudos Feitos</option>
+                    </select>
                 </div>
                 <div class="user-profile">
                     <span class="date-now" id="currentDate"></span>
@@ -69,12 +82,20 @@
                         </div>
                         <div class="card-icon orange">👥</div>
                     </div>
+                    <div class="card glass">
+                        <div class="card-info">
+                            <h3>Média Atingida</h3>
+                            <p class="value" id="avgPercentage">0%</p>
+                        </div>
+                        <div class="card-icon yellow">🏅</div>
+                    </div>
                 </div>
 
                 <div class="charts-grid">
                     <div class="chart-container glass">
                         <div class="chart-header">
                             <h2>Performance por Dentista</h2>
+                            <!-- Fix #9: subtítulo atualizado dinamicamente pelo JS -->
                             <p>Realizado vs Meta Mensal</p>
                         </div>
                         <div class="canvas-wrapper">
@@ -86,6 +107,7 @@
                 <div class="table-container glass">
                     <div class="table-header">
                         <h2>Relatório Detalhado</h2>
+                        <!-- Fix #3: exporta apenas dados visíveis/filtrados -->
                         <button class="btn-export" onclick="exportToCSV()">Exportar CSV</button>
                     </div>
                     <div class="table-wrapper">
@@ -96,12 +118,13 @@
                                     <th>Meta Diária</th>
                                     <th>Meta Mensal</th>
                                     <th>Realizado</th>
+                                    <th>Média/Dia</th>
                                     <th>Status</th>
                                     <th>Atingido</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- Data will be injected here -->
+                                <!-- Preenchido dinamicamente pelo script.js -->
                             </tbody>
                         </table>
                     </div>
